@@ -1,46 +1,44 @@
-const
-    argv = require('minimist')(process.argv.slice(2)),
-    { GetGeneralBotConfig, BotClient, Personality, AbstractModel } = require(".")
-;
+const argv = require('minimist')(process.argv.slice(2));
+const { GetGeneralBotConfig, BotClient, Personality, AbstractModel } = require(".");
 
 
 
-// 1) Load the configuration file
+
+
+// 1) Load the personality
+const personality_name = argv.p || argv.personality || "default";
+const personality = new Personality(personality_name);
+
+if(!personality.exists){
+    console.error(`Personality file "${personality_name}" not found`);
+    process.exit(1);
+}
+
+
+// 2) Load the configuration file
 const config = new GetGeneralBotConfig(`./config`);
 
 
-// 2) Get the default model from the configuration file
-const defaultModelName = config.data.block("use").attributes[0];
-const defaultPersonalityName = argv.p || argv.personality || "default";
+// 3) Get the model reference/config
+const model_name = config.data.block("use").attributes[0];
+const model_reference = config.getModel(model_name);
 
-
-// 3) Load the personality
-const defaultPersonality = new Personality(defaultPersonalityName);
-
-if(!defaultPersonality.exists){
-    console.error(`Personality file "${defaultPersonalityName}" not found`);
-    process.exit(1);
-}
-
-
-// 4) Get the model
-const defaultModel = config.getModel(defaultModelName);
-
-if(!defaultModel){
-    console.error(`Model template "${defaultModelName}" was not found`);
+if(!model_reference){
+    console.error(`Model template "${model_name}" was not found in the config`);
     process.exit(1);
 }
 
 
 
-// And finally:
 
 
-// Create and start a new bot instance with the chosen personality and model
-const modelWrapper = new AbstractModel(defaultModel, defaultPersonality);
+// And finally, we can use the personality and model to run a bot.
+
+// Create the model instance
+const model = new AbstractModel(model_reference, personality);
 
 // Create the bot client and attach the model
-const client = new BotClient(modelWrapper, config);
+const client = new BotClient(model, config);
 
 // Start the bot
 client.start();
