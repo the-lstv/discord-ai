@@ -1,3 +1,5 @@
+![Frame 503 (2)](https://github.com/user-attachments/assets/fe788fd6-6fb2-48b6-b9b0-2a00fddcbcbc)
+
 This project allows you to create unique realistic Discord personalities using various AI models. <br>
 They can engage in conversations, add flair to your server, help with moderation, and more.
 
