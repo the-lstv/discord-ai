@@ -1,0 +1,59 @@
+# Config file for the AI
+# Note: for syntax highlighting, use the "NGINX Conf" language in VSCode.
+
+# Note: Some parts of the config file can be refreshed live without reloading the bot.
+
+# Model template to use
+use(gemini);
+
+bot {
+    # Add usernames that will be able to access debug commands of the bot
+    admins: thelstv;
+
+    # Whitelist servers that *selfbots* are able to chat in
+    whitelist: "1250890249823846521", "969761036423012353";
+
+    channel_blacklist: "1255387201806663680";
+    server_blacklist: "791604177868292106";
+}
+
+# Example model template
+model (example) {
+    # < OpenAI | GoogleAI | ArisenAI >
+    platform: "";
+    model: "";
+
+    # Prompt file optimized for your spefic model
+    prompt: "prompts/original.txt";
+}
+
+
+# Model template optimized for Gemini
+# Put your API key in the GEMINI_KEY environment variable
+model (gemini) {
+    platform: "GoogleAI";
+
+    model: "gemini-1.5-pro";
+    prompt: "prompts/prompt-Gemini.txt";
+}
+
+
+# Model template optimized for GPT
+# Put your API key in the OPENAI_API_KEY environment variable
+model (gpt) {
+    platform: "OpenAI";
+
+    # NOTE: For OpenAI, please specify the assistant ID instead of the model name.
+    model: "gpt-4o-mini";
+    prompt: "prompts/prompt-4o.txt";
+}
+
+
+# Model template optimized for Arisen
+# Put your API key in the ARISEN_KEY environment variable
+model (arisen) {
+    platform: "ArisenAI";
+
+    model: "gpm-14b-v2";
+    prompt: "prompts/original.txt";
+}

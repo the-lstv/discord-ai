@@ -1,0 +1,8 @@
+personalities/*
+!personalities/template
+
+# Deprecated
+app.openai.js
+
+history
+last-thread
