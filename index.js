@@ -320,7 +320,7 @@ class BotClient {
 
             this.createCommands();
 
-            await rest.put(this.discord.Routes.applicationCommands(personality.application_id), this.config.commands || this.commands);
+            await rest.put(this.discord.Routes.applicationCommands(personality.application_id), { body: this.config.commands || this.commands });
 
             this.client.on("interactionCreate", $ => this.handleCommand($));
         }
@@ -685,223 +685,221 @@ class BotClient {
     createCommands(){
         const _this = this;
 
-        return _this.commands = {
-            body: [
-                {
-                    name: "debug-ping",
-                    description: "Ping-pong.",
-        
-                    async action(interaction){
-                        await interaction.reply(`Pong! Queue is ${_this.running? "enabled": "disabled"}. Size of the queue is: ${_this.queue.length}`);
-                    }
-                },
-                {
-                    name: "debug-qpush",
-                    description: "(debug) push queue manually",
-        
-                    async action(interaction){
-                        await interaction.reply('Done');
-                        await _this.uploadQueue()
-                    }
-                },
-                {
-                    name: "debug-probe",
-                    description: "(debug) emulate free will",
-        
-                    async action(interaction){
-                        await interaction.reply('Done');
-                        await _this.uploadQueue([])
-                    }
-                },
-                {
-                    name: "debug-qpause",
-                    description: "(debug) disable queue processing temporarily",
-        
-                    async action(interaction){
-                        _this.pause()
-                        console.log("Queue proccessing paused");
+        return _this.commands = [
+            {
+                name: "debug-ping",
+                description: "Ping-pong.",
+    
+                async action(interaction){
+                    await interaction.reply(`Pong! Queue is ${_this.running? "enabled": "disabled"}. Size of the queue is: ${_this.queue.length}`);
+                }
+            },
+            {
+                name: "debug-qpush",
+                description: "(debug) push queue manually",
+    
+                async action(interaction){
+                    await interaction.reply('Done');
+                    await _this.uploadQueue()
+                }
+            },
+            {
+                name: "debug-probe",
+                description: "(debug) emulate free will",
+    
+                async action(interaction){
+                    await interaction.reply('Done');
+                    await _this.uploadQueue([])
+                }
+            },
+            {
+                name: "debug-qpause",
+                description: "(debug) disable queue processing temporarily",
+    
+                async action(interaction){
+                    _this.pause()
+                    console.log("Queue proccessing paused");
+                    await interaction.reply('Success');
+                }
+            },
+            {
+                name: "debug-qresume",
+                description: "(debug) enable queue processing",
+    
+                async action(interaction){
+                    _this.resume()
+                    console.log("Queue proccessing resumed");
+                    await interaction.reply('Success');
+                }
+            },
+            {
+                name: "debug-qclear",
+                description: "(debug) clear queue",
+    
+                async action(interaction){
+                    _this.queue = []
+                    console.log("Queue cleared");
+                    await interaction.reply('Success');
+                }
+            },
+            {
+                name: "debug-refresh-config",
+                description: "(debug) hot-reload config of the bot and apply some of its changes without reloading the bot",
+    
+                async action(interaction){
+                    await _this.config.refresh()
+                }
+            },
+            {
+                name: "debug-qget",
+                description: "(debug) view queue",
+    
+                async action(interaction){
+                    await interaction.reply(_this.queue.map((item, index) => `- **Event no. ${index}** \n\`\`\`json\n${JSON.stringify(item)}\n\`\`\``).join("\n") || "No events to show.");
+                }
+            },
+            {
+                name: "debug-gthread",
+                description: "(debug) get current memory thread ID",
+    
+                async action(interaction){
+                    await interaction.reply(_this.thread? _this.thread.id: "No thread attached!");
+                }
+            },
+            {
+                name: "debug-reset-thread",
+                description: "(debug) reset and create a new memory thread - returns new thread ID",
+    
+                async action(interaction){
+                    await interaction.reply("Threads are currently unavailable :(");
+                    // await _this.engine.createThread()
+                    // await interaction.reply(thread.id);
+                }
+            },
+            {
+                name: "debug-sthread",
+                description: "(debug) restore a memory thread from ID",
+                options: [{
+                    name: 'input',
+                    type: 3,
+                    description: 'thread ID',
+                    required: true
+                }],
+    
+                async action(interaction){
+                    try{
+                        await retrieveThread(interaction.options.getString('input'))
                         await interaction.reply('Success');
+                    } catch (e) {
+                        console.error(e);
+                        await interaction.reply('Failed');
                     }
-                },
-                {
-                    name: "debug-qresume",
-                    description: "(debug) enable queue processing",
+                }
+            },
+            {
+                name: "debug-delete-message",
+                description: "(debug) Delete a message",
+                options: [{
+                    name: 'input',
+                    type: 3,
+                    description: 'thread ID',
+                    required: true
+                }],
+    
+                async action(interaction){
+                    channel = interaction.channel;
+    
+                    try {
+                        target = await channel.messages.fetch(event.target)
+                    } catch (e) {
+                        console.error("Failed fetching message " + event.target);
+                        console.error(e);
+                        return
+                    }
+    
+                    try {
+                        target.delete()
+                    } catch (e) {
+                        console.error("Failed deleting a message " + event.target);
+                        console.error(e);
+                        return
+                    }
+                }
+            },
+            {
+                name: "debug-emulate",
+                description: "(debug) emulate a custom queue OUTPUT event",
+                options: [{
+                    name: 'input',
+                    type: 3,
+                    description: 'object OUTPUT event',
+                    required: true
+                }],
+    
+                async action(interaction){
+                    try{
+    
+                        let event = JSON.parse(interaction.options.getString('input'));
+                        _this.proccessEvent(event)
         
-                    async action(interaction){
-                        _this.resume()
-                        console.log("Queue proccessing resumed");
                         await interaction.reply('Success');
+                        
+                    } catch (e) {
+                        console.error(e);
+                        await interaction.reply('Failed');
                     }
-                },
-                {
-                    name: "debug-qclear",
-                    description: "(debug) clear queue",
+                }
+            },
+            {
+                name: "debug-qadd",
+                description: "(debug) emulate a custom queue INPUT event",
+                options: [{
+                    name: 'input',
+                    type: 3,
+                    description: 'object INPUT event',
+                    required: true
+                }],
+    
+                async action(interaction){
+                    try{
+    
+                        let event = JSON.parse(interaction.options.getString('input'));
+                        _this.queue.push(event)
         
-                    async action(interaction){
-                        _this.queue = []
-                        console.log("Queue cleared");
                         await interaction.reply('Success');
+                        
+                    } catch (e) {
+                        console.error(e);
+                        await interaction.reply('Failed');
                     }
-                },
-                {
-                    name: "debug-refresh-config",
-                    description: "(debug) hot-reload config of the bot and apply some of its changes without reloading the bot",
+                }
+            },
+            {
+                name: "debug-qremove",
+                description: "(debug) remove a specific queue item, can be a comma separated list",
+                options: [{
+                    name: 'input',
+                    type: 3,
+                    description: 'item to remove',
+                    required: true
+                }],
+    
+                async action(interaction){
+                    try{
+    
+                        let index = + interaction.options.getString('input')
+                        delete _this.queue[index]
+                        _this.queue = _this.queue.filter(empty => empty)
         
-                    async action(interaction){
-                        await _this.config.refresh()
+                        await interaction.reply('Success');
+                        
+                    } catch (e) {
+                        console.error(e);
+                        await interaction.reply('Failed');
                     }
-                },
-                {
-                    name: "debug-qget",
-                    description: "(debug) view queue",
-        
-                    async action(interaction){
-                        await interaction.reply(_this.queue.map((item, index) => `- **Event no. ${index}** \n\`\`\`json\n${JSON.stringify(item)}\n\`\`\``).join("\n") || "No events to show.");
-                    }
-                },
-                {
-                    name: "debug-gthread",
-                    description: "(debug) get current memory thread ID",
-        
-                    async action(interaction){
-                        await interaction.reply(_this.thread? _this.thread.id: "No thread attached!");
-                    }
-                },
-                {
-                    name: "debug-reset-thread",
-                    description: "(debug) reset and create a new memory thread - returns new thread ID",
-        
-                    async action(interaction){
-                        await interaction.reply("Threads are currently unavailable :(");
-                        // await _this.engine.createThread()
-                        // await interaction.reply(thread.id);
-                    }
-                },
-                {
-                    name: "debug-sthread",
-                    description: "(debug) restore a memory thread from ID",
-                    options: [{
-                        name: 'input',
-                        type: 3,
-                        description: 'thread ID',
-                        required: true
-                    }],
-        
-                    async action(interaction){
-                        try{
-                            await retrieveThread(interaction.options.getString('input'))
-                            await interaction.reply('Success');
-                        } catch (e) {
-                            console.error(e);
-                            await interaction.reply('Failed');
-                        }
-                    }
-                },
-                {
-                    name: "debug-delete-message",
-                    description: "(debug) Delete a message",
-                    options: [{
-                        name: 'input',
-                        type: 3,
-                        description: 'thread ID',
-                        required: true
-                    }],
-        
-                    async action(interaction){
-                        channel = interaction.channel;
-        
-                        try {
-                            target = await channel.messages.fetch(event.target)
-                        } catch (e) {
-                            console.error("Failed fetching message " + event.target);
-                            console.error(e);
-                            return
-                        }
-        
-                        try {
-                            target.delete()
-                        } catch (e) {
-                            console.error("Failed deleting a message " + event.target);
-                            console.error(e);
-                            return
-                        }
-                    }
-                },
-                {
-                    name: "debug-emulate",
-                    description: "(debug) emulate a custom queue OUTPUT event",
-                    options: [{
-                        name: 'input',
-                        type: 3,
-                        description: 'object OUTPUT event',
-                        required: true
-                    }],
-        
-                    async action(interaction){
-                        try{
-        
-                            let event = JSON.parse(interaction.options.getString('input'));
-                            _this.proccessEvent(event)
-            
-                            await interaction.reply('Success');
-                            
-                        } catch (e) {
-                            console.error(e);
-                            await interaction.reply('Failed');
-                        }
-                    }
-                },
-                {
-                    name: "debug-qadd",
-                    description: "(debug) emulate a custom queue INPUT event",
-                    options: [{
-                        name: 'input',
-                        type: 3,
-                        description: 'object INPUT event',
-                        required: true
-                    }],
-        
-                    async action(interaction){
-                        try{
-        
-                            let event = JSON.parse(interaction.options.getString('input'));
-                            _this.queue.push(event)
-            
-                            await interaction.reply('Success');
-                            
-                        } catch (e) {
-                            console.error(e);
-                            await interaction.reply('Failed');
-                        }
-                    }
-                },
-                {
-                    name: "debug-qremove",
-                    description: "(debug) remove a specific queue item, can be a comma separated list",
-                    options: [{
-                        name: 'input',
-                        type: 3,
-                        description: 'item to remove',
-                        required: true
-                    }],
-        
-                    async action(interaction){
-                        try{
-        
-                            let index = + interaction.options.getString('input')
-                            delete _this.queue[index]
-                            _this.queue = _this.queue.filter(empty => empty)
-            
-                            await interaction.reply('Success');
-                            
-                        } catch (e) {
-                            console.error(e);
-                            await interaction.reply('Failed');
-                        }
-                    }
-                },
-            ]
-        }
+                }
+            },
+        ]
     }
 
 
@@ -918,7 +916,9 @@ class BotClient {
             if(handler) await handler.action(interaction); else {
                 await interaction.reply('Unknown command used');
             }
-        } catch {}
+        } catch(error) {
+            console.error(error)
+        }
     }
 }
 
